@@ -1,0 +1,996 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Insta Docs</title>
+<style>
+  :root {
+    --primary: #1a3a6e;
+    --primary-light: #e8eef7;
+    --accent: #2563eb;
+    --bg: #f8fafc;
+    --card: #ffffff;
+    --text: #1e293b;
+    --muted: #64748b;
+    --border: #e2e8f0;
+    --danger: #dc2626;
+    --success: #16a34a;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .screen { display: none; min-height: 100vh; padding-bottom: 80px; }
+  .screen.active { display: block; }
+
+  /* Header */
+  header {
+    background: var(--primary);
+    color: white;
+    padding: 16px 20px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  header h1 { font-size: 1.25rem; font-weight: 600; flex: 1; }
+  .back-btn {
+    background: none; border: none; color: white; font-size: 1.4rem;
+    padding: 4px 8px; cursor: pointer; line-height: 1;
+  }
+
+  /* Category / Template cards */
+  .grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 12px;
+    padding: 16px;
+  }
+  @media (min-width: 480px) {
+    .grid { grid-template-columns: 1fr 1fr; }
+  }
+  .card {
+    background: var(--card);
+    border-radius: 12px;
+    padding: 18px;
+    border: 1px solid var(--border);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+  .card:active { transform: scale(0.98); }
+  .card h3 { font-size: 1.05rem; margin-bottom: 6px; color: var(--primary); }
+  .card p { font-size: 0.85rem; color: var(--muted); line-height: 1.4; }
+
+  /* Form */
+  .form-container { padding: 16px; max-width: 560px; margin: 0 auto; }
+  .field { margin-bottom: 16px; }
+  .field label {
+    display: block; font-size: 0.85rem; font-weight: 500;
+    margin-bottom: 6px; color: var(--text);
+  }
+  .field input, .field textarea, .field select {
+    width: 100%; padding: 12px 14px; border: 1px solid var(--border);
+    border-radius: 8px; font-size: 1rem; background: white;
+    color: var(--text);
+  }
+  .field input:focus, .field textarea:focus {
+    outline: none; border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(37,99,235,0.15);
+  }
+  .field textarea { min-height: 80px; resize: vertical; }
+  .optional { color: var(--muted); font-weight: 400; }
+
+  /* Buttons */
+  .btn-row {
+    display: flex; gap: 10px; padding: 16px;
+    position: fixed; bottom: 0; left: 0; right: 0;
+    background: white; border-top: 1px solid var(--border);
+    z-index: 50;
+  }
+  .btn {
+    flex: 1; padding: 14px; border: none; border-radius: 10px;
+    font-size: 1rem; font-weight: 600; cursor: pointer;
+  }
+  .btn-primary { background: var(--primary); color: white; }
+  .btn-secondary { background: var(--primary-light); color: var(--primary); }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  /* Preview */
+  #preview-frame {
+    background: white;
+    max-width: 700px;
+    margin: 16px auto;
+    padding: 40px 36px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    border-radius: 4px;
+    min-height: 80vh;
+    font-family: "Times New Roman", Times, serif;
+    font-size: 15px;
+    line-height: 1.55;
+    color: #111;
+  }
+  #preview-frame .doc-date { text-align: right; margin-bottom: 24px; }
+  #preview-frame .doc-to { margin-bottom: 18px; }
+  #preview-frame .doc-subject { font-weight: bold; margin-bottom: 18px; }
+  #preview-frame .doc-body p { margin-bottom: 12px; }
+  #preview-frame .doc-closing { margin-top: 28px; }
+  #preview-frame .signature-area {
+    margin-top: 8px;
+    min-height: 60px;
+  }
+  #preview-frame .signature-area img {
+    max-height: 70px;
+    max-width: 220px;
+  }
+  #preview-frame .doc-name { font-weight: 600; margin-top: 4px; }
+
+  /* Signature pad */
+  #signature-screen .pad-wrap {
+    margin: 20px 16px;
+    background: white;
+    border: 2px dashed var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  #sig-canvas {
+    width: 100%;
+    height: 220px;
+    display: block;
+    touch-action: none;
+  }
+  .sig-controls {
+    display: flex; gap: 10px; padding: 0 16px 16px;
+    flex-wrap: wrap;
+  }
+  .color-toggle {
+    display: flex; gap: 8px; align-items: center;
+    font-size: 0.9rem;
+  }
+  .color-btn {
+    width: 28px; height: 28px; border-radius: 50%;
+    border: 2px solid transparent; cursor: pointer;
+  }
+  .color-btn.active { border-color: var(--text); }
+  .color-btn.blue { background: #1a3a6e; }
+  .color-btn.black { background: #111; }
+
+  /* Empty state / intro */
+  .intro {
+    text-align: center;
+    padding: 40px 24px 20px;
+  }
+  .intro h2 { font-size: 1.4rem; color: var(--primary); margin-bottom: 8px; }
+  .intro p { color: var(--muted); font-size: 0.95rem; }
+
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+
+<!-- ========== SCREEN: Home / Categories ========== -->
+<div id="screen-home" class="screen active">
+  <header>
+    <h1>Insta Docs</h1>
+  </header>
+  <div class="intro">
+    <h2>Create formal documents fast</h2>
+    <p>Pick a category → fill a few fields → sign → get a ready PDF</p>
+  </div>
+  <div class="grid" id="category-grid"></div>
+</div>
+
+<!-- ========== SCREEN: Templates ========== -->
+<div id="screen-templates" class="screen">
+  <header>
+    <button class="back-btn" onclick="goHome()">←</button>
+    <h1 id="templates-title">Templates</h1>
+  </header>
+  <div class="grid" id="template-grid"></div>
+</div>
+
+<!-- ========== SCREEN: Form ========== -->
+<div id="screen-form" class="screen">
+  <header>
+    <button class="back-btn" onclick="goTemplates()">←</button>
+    <h1 id="form-title">Details</h1>
+  </header>
+  <div class="form-container" id="form-fields"></div>
+  <div class="btn-row">
+    <button class="btn btn-secondary" onclick="goTemplates()">Back</button>
+    <button class="btn btn-primary" onclick="goPreview()">Preview</button>
+  </div>
+</div>
+
+<!-- ========== SCREEN: Preview ========== -->
+<div id="screen-preview" class="screen">
+  <header>
+    <button class="back-btn" onclick="goForm()">←</button>
+    <h1>Preview</h1>
+  </header>
+  <div id="preview-frame"></div>
+  <div class="btn-row">
+    <button class="btn btn-secondary" onclick="goSignature()">Add Signature</button>
+    <button class="btn btn-primary" onclick="exportPdf()">Download / Share</button>
+  </div>
+</div>
+
+<!-- ========== SCREEN: Signature ========== -->
+<div id="signature-screen" class="screen">
+  <header>
+    <button class="back-btn" onclick="goPreview()">←</button>
+    <h1>Your Signature</h1>
+  </header>
+  <p style="padding:16px 16px 0; color:var(--muted); font-size:0.9rem;">
+    Draw your signature below. Blue ink looks more natural on paper.
+  </p>
+  <div class="pad-wrap">
+    <canvas id="sig-canvas"></canvas>
+  </div>
+  <div class="sig-controls">
+    <div class="color-toggle">
+      <span>Ink:</span>
+      <div class="color-btn blue active" data-color="#1a3a6e" onclick="setInkColor(this)"></div>
+      <div class="color-btn black" data-color="#111111" onclick="setInkColor(this)"></div>
+    </div>
+    <button class="btn btn-secondary" style="flex:0 0 auto; padding:10px 18px;" onclick="clearSignature()">Clear</button>
+  </div>
+  <div class="btn-row">
+    <button class="btn btn-secondary" onclick="skipSignature()">Skip</button>
+    <button class="btn btn-primary" onclick="saveSignatureAndPreview()">Use Signature</button>
+  </div>
+</div>
+
+<script>
+// ===================== DATA =====================
+const CATEGORIES = [
+  {
+    id: "resignation",
+    name: "Resignation Letters",
+    hint: "Professional notice, gratitude, immediate, personal reasons"
+  },
+  {
+    id: "invoice",
+    name: "Invoices & Payments",
+    hint: "Quotation, invoice, payment reminder, receipt"
+  },
+  {
+    id: "leave",
+    name: "Leave & Absence",
+    hint: "Leave application, sick leave, school note, extended leave"
+  },
+  {
+    id: "authorization",
+    name: "Authorization Letters",
+    hint: "General authority, collect documents, bank, child pickup"
+  }
+];
+
+const TEMPLATES = {
+  resignation: [
+    {
+      id: "std_notice",
+      name: "Standard Notice",
+      fields: [
+        { key: "name", label: "Your Full Name", required: true },
+        { key: "designation", label: "Your Designation / Position", required: true },
+        { key: "manager", label: "Manager's Name", required: true },
+        { key: "company", label: "Company Name", required: true },
+        { key: "lastDay", label: "Last Working Day", type: "date", required: true }
+      ],
+      render: (d) => `
+        <div class="doc-date">${today()}</div>
+        <div class="doc-to">
+          To<br>
+          ${esc(d.manager)}<br>
+          ${esc(d.company)}
+        </div>
+        <div class="doc-subject">Subject: Resignation from the position of ${esc(d.designation)}</div>
+        <div class="doc-body">
+          <p>Dear ${esc(d.manager)},</p>
+          <p>I am writing to formally resign from my position as ${esc(d.designation)} at ${esc(d.company)}, effective ${esc(d.lastDay)}.</p>
+          <p>I am grateful for the opportunities I have had during my time here and I am committed to ensuring a smooth transition. Please let me know how I can assist during the notice period.</p>
+          <p>I wish the company continued success.</p>
+        </div>
+        <div class="doc-closing">
+          Yours sincerely,<br>
+          <div class="signature-area" id="sig-placeholder"></div>
+          <div class="doc-name">${esc(d.name)}</div>
+          ${esc(d.designation)}
+        </div>`
+    },
+    {
+      id: "gratitude",
+      name: "With Gratitude",
+      fields: [
+        { key: "name", label: "Your Full Name", required: true },
+        { key: "designation", label: "Your Designation", required: true },
+        { key: "manager", label: "Manager's Name", required: true },
+        { key: "company", label: "Company Name", required: true },
+        { key: "lastDay", label: "Last Working Day", type: "date", required: true }
+      ],
+      render: (d) => `
+        <div class="doc-date">${today()}</div>
+        <div class="doc-to">
+          To<br>${esc(d.manager)}<br>${esc(d.company)}
+        </div>
+        <div class="doc-subject">Subject: Resignation – ${esc(d.designation)}</div>
+        <div class="doc-body">
+          <p>Dear ${esc(d.manager)},</p>
+          <p>Please accept this letter as formal notice of my resignation from the position of ${esc(d.designation)} at ${esc(d.company)}. My last working day will be ${esc(d.lastDay)}.</p>
+          <p>I would like to express my sincere gratitude for the support, guidance and opportunities provided to me. I have learned a great deal and truly value the experiences gained here.</p>
+          <p>I am happy to help with the transition and hand over my responsibilities in an orderly manner.</p>
+          <p>Thank you once again for everything.</p>
+        </div>
+        <div class="doc-closing">
+          Warm regards,<br>
+          <div class="signature-area" id="sig-placeholder"></div>
+          <div class="doc-name">${esc(d.name)}</div>
+        </div>`
+    },
+    {
+      id: "immediate",
+      name: "Immediate Resignation",
+      fields: [
+        { key: "name", label: "Your Full Name", required: true },
+        { key: "designation", label: "Your Designation", required: true },
+        { key: "company", label: "Company Name", required: true },
+        { key: "reason", label: "Reason (optional)", required: false }
+      ],
+      render: (d) => `
+        <div class="doc-date">${today()}</div>
+        <div class="doc-to">To<br>The Management<br>${esc(d.company)}</div>
+        <div class="doc-subject">Subject: Immediate Resignation</div>
+        <div class="doc-body">
+          <p>Dear Sir/Madam,</p>
+          <p>I hereby resign from my position as ${esc(d.designation)} at ${esc(d.company)} with immediate effect.</p>
+          ${d.reason ? `<p>Reason: ${esc(d.reason)}</p>` : ""}
+          <p>I request you to kindly relieve me from my duties at the earliest and process any pending formalities.</p>
+          <p>I appreciate the opportunity given to me and wish the organisation the very best.</p>
+        </div>
+        <div class="doc-closing">
+          Yours faithfully,<br>
+          <div class="signature-area" id="sig-placeholder"></div>
+          <div class="doc-name">${esc(d.name)}</div>
+        </div>`
+    },
+    {
+      id: "personal",
+      name: "Personal Reasons",
+      fields: [
+        { key: "name", label: "Your Full Name", required: true },
+        { key: "designation", label: "Your Designation", required: true },
+        { key: "manager", label: "Manager's Name", required: true },
+        { key: "company", label: "Company Name", required: true },
+        { key: "lastDay", label: "Last Working Day", type: "date", required: true }
+      ],
+      render: (d) => `
+        <div class="doc-date">${today()}</div>
+        <div class="doc-to">To<br>${esc(d.manager)}<br>${esc(d.company)}</div>
+        <div class="doc-subject">Subject: Resignation due to Personal Reasons</div>
+        <div class="doc-body">
+          <p>Dear ${esc(d.manager)},</p>
+          <p>I am writing to inform you of my decision to resign from my role as ${esc(d.designation)} at ${esc(d.company)} for personal reasons. My last working day will be ${esc(d.lastDay)}.</p>
+          <p>I am thankful for the support I received during my tenure. I will do my best to complete pending work and assist with a smooth handover.</p>
+          <p>I hope you will understand my situation.</p>
+        </div>
+        <div class="doc-closing">
+          Sincerely,<br>
+          <div class="signature-area" id="sig-placeholder"></div>
+          <div class="doc-name">${esc(d.name)}</div>
+        </div>`
+    }
+  ],
+
+  invoice: [
+    {
+      id: "quotation",
+      name: "Quotation",
+      fields: [
+        { key: "fromName", label: "Your Name / Business", required: true },
+        { key: "toName", label: "Client Name", required: true },
+        { key: "description", label: "Description of goods / services", required: true },
+        { key: "amount", label: "Total Amount", required: true },
+        { key: "validUntil", label: "Valid Until (optional)", type: "date", required: false }
+      ],
+      render: (d) => `
+        <div style="text-align:center; font-size:1.4em; font-weight:bold; margin-bottom:8px;">QUOTATION</div>
+        <div class="doc-date">Date: ${today()}</div>
+        <p><strong>From:</strong><br>${esc(d.fromName)}</p>
+        <p><strong>To:</strong><br>${esc(d.toName)}</p>
+        <p style="margin-top:20px;"><strong>Description:</strong><br>${esc(d.description)}</p>
+        <p style="margin-top:16px; font-size:1.15em;"><strong>Total Amount:</strong> ${esc(d.amount)}</p>
+        ${d.validUntil ? `<p>This quotation is valid until ${esc(d.validUntil)}.</p>` : ""}
+        <p style="margin-top:24px;">Thank you for your interest. We look forward to working with you.</p>
+        <div class="doc-closing">
+          <div class="signature-area" id="sig-placeholder"></div>
+          <div class="doc-name">${esc(d.fromName)}</div>
+        </div>`
+    },
+    {
+      id: "invoice",
+      name: "Invoice",
+      fields: [
+        { key: "fromName", label: "Your Name / Business", required: true },
+        { key: "toName", label: "Client Name", required: true },
+        { key: "invoiceNo", label: "Invoice Number", required: true },
+        { key: "description", label: "Description", required: true },
+        { key: "amount", label: "Total Amount", required: true },
+        { key: "dueDate", label: "Due Date (optional)", type: "date", required: false }
+      ],
+      render: (d) => `
+        <div style="text-align:center; font-size:1.4em; font-weight:bold; margin-bottom:8px;">INVOICE</div>
+        <div class="doc-date">Date: ${today()} &nbsp;&nbsp; Invoice #: ${esc(d.invoiceNo)}</div>
+        <p><strong>From:</strong><br>${esc(d.fromName)}</p>
+        <p><strong>Bill To:</strong><br>${esc(d.toName)}</p>
+        <p style="margin-top:20px;"><strong>Description:</strong><br>${esc(d.description)}</p>
+        <p style="margin-top:16px; font-size:1.2em;"><strong>Amount Due:</strong> ${esc(d.amount)}</p>
+        ${d.dueDate ? `<p>Payment due by: ${esc(d.dueDate)}</p>` : ""}
+        <p style="margin-top:24px;">Please make payment at the earliest. Thank you for your business.</p>
+        <div class="doc-closing">
+          <div class="signature-area" id="sig-placeholder"></div>
+          <div class="doc-name">${esc(d.fromName)}</div>
+        </div>`
+    },
+    {
+      id: "reminder",
+      name: "Payment Reminder",
+      fields: [
+        { key: "fromName", label: "Your Name / Business", required: true },
+        { key: "toName", label: "Client Name", required: true },
+        { key: "invoiceNo", label: "Invoice / Reference No.", required: true },
+        { key: "amount", label: "Outstanding Amount", required: true },
+        { key: "originalDate", label: "Original Due Date (optional)", type: "date", required: false }
+      ],
+      render: (d) => `
+        <div class="doc-date">${today()}</div>
+        <div class="doc-to">To<br>${esc(d.toName)}</div>
+        <div class="doc-subject">Subject: Gentle Reminder – Outstanding Payment (Ref: ${esc(d.invoiceNo)})</div>
+        <div class="doc-body">
+          <p>Dear ${esc(d.toName)},</p>
+          <p>This is a friendly reminder that the payment of <strong>${esc(d.amount)}</strong> against ${esc(d.invoiceNo)} is still outstanding${d.originalDate ? ` (originally due on ${esc(d.originalDate)})` : ""}.</p>
+          <p>We would be grateful if you could arrange the payment at the earliest convenience. If you have already made the payment, please disregard this note and accept our thanks.</p>
+          <p>Please feel free to contact us if you need any clarification.</p>
+        </div>
+        <div class="doc-closing">
+          Kind regards,<br>
+          <div class="signature-area" id="sig-placeholder"></div>
+          <div class="doc-name">${esc(d.fromName)}</div>
+        </div>`
+    },
+    {
+      id: "receipt",
+      name: "Receipt",
+      fields: [
+        { key: "fromName", label: "Received By (Your Name / Business)", required: true },
+        { key: "toName", label: "Received From", required: true },
+        { key: "amount", label: "Amount Received", required: true },
+        { key: "purpose", label: "Towards / Purpose", required: true },
+        { key: "mode", label: "Payment Mode (Cash / UPI / Bank etc.)", required: false }
+      ],
+      render: (d) => `
+        <div style="text-align:center; font-size:1.4em; font-weight:bold; margin-bottom:8px;">RECEIPT</div>
+        <div class="doc-date">Date: ${today()}</div>
+        <p>Received with thanks from <strong>${esc(d.toName)}</strong> the sum of <strong>${esc(d.amount)}</strong>${d.mode ? ` via ${esc(d.mode)}` : ""}.</p>
+        <p style="margin-top:16px;"><strong>Towards:</strong> ${esc(d.purpose)}</p>
+        <p style="margin-top:28px;">This receipt is issued as acknowledgement of the above payment.</p>
+        <div class="doc-closing">
+          <div class="signature-area" id="sig-placeholder"></div>
+          <div class="doc-name">${esc(d.fromName)}</div>
+        </div>`
+    }
+  ],
+
+  leave: [
+    {
+      id: "leave_app",
+      name: "Leave Application",
+      fields: [
+        { key: "name", label: "Your Full Name", required: true },
+        { key: "designation", label: "Designation", required: true },
+        { key: "manager", label: "Manager / HR Name", required: true },
+        { key: "fromDate", label: "Leave From", type: "date", required: true },
+        { key: "toDate", label: "Leave To", type: "date", required: true },
+        { key: "reason", label: "Reason (optional)", required: false }
+      ],
+      render: (d) => `
+        <div class="doc-date">${today()}</div>
+        <div class="doc-to">To<br>${esc(d.manager)}</div>
+        <div class="doc-subject">Subject: Application for Leave</div>
+        <div class="doc-body">
+          <p>Dear ${esc(d.manager)},</p>
+          <p>I am writing to request leave from ${esc(d.fromDate)} to ${esc(d.toDate)}.</p>
+          ${d.reason ? `<p>Reason: ${esc(d.reason)}</p>` : ""}
+          <p>I have arranged my pending work and will ensure a smooth handover. I will be reachable on phone if anything urgent arises.</p>
+          <p>Kindly grant me leave for the above period.</p>
+        </div>
+        <div class="doc-closing">
+          Thank you,<br>
+          <div class="signature-area" id="sig-placeholder"></div>
+          <div class="doc-name">${esc(d.name)}</div>
+          ${esc(d.designation)}
+        </div>`
+    },
+    {
+      id: "sick",
+      name: "Sick Leave",
+      fields: [
+        { key: "name", label: "Your Full Name", required: true },
+        { key: "designation", label: "Designation", required: true },
+        { key: "manager", label: "Manager / HR Name", required: true },
+        { key: "fromDate", label: "From Date", type: "date", required: true },
+        { key: "toDate", label: "To Date (if known)", type: "date", required: false }
+      ],
+      render: (d) => `
+        <div class="doc-date">${today()}</div>
+        <div class="doc-to">To<br>${esc(d.manager)}</div>
+        <div class="doc-subject">Subject: Sick Leave Application</div>
+        <div class="doc-body">
+          <p>Dear ${esc(d.manager)},</p>
+          <p>I am not feeling well and will be unable to attend office starting ${esc(d.fromDate)}${d.toDate ? ` until ${esc(d.toDate)}` : ""}.</p>
+          <p>I request you to kindly grant me sick leave for the required period. I will keep you updated on my recovery and resume work as soon as I am fit.</p>
+        </div>
+        <div class="doc-closing">
+          Regards,<br>
+          <div class="signature-area" id="sig-placeholder"></div>
+          <div class="doc-name">${esc(d.name)}</div>
+          ${esc(d.designation)}
+        </div>`
+    },
+    {
+      id: "school",
+      name: "School Absence Note",
+      fields: [
+        { key: "parentName", label: "Parent / Guardian Name", required: true },
+        { key: "childName", label: "Student Name", required: true },
+        { key: "classInfo", label: "Class / Section", required: true },
+        { key: "dates", label: "Date(s) of Absence", required: true },
+        { key: "reason", label: "Reason", required: true }
+      ],
+      render: (d) => `
+        <div class="doc-date">${today()}</div>
+        <div class="doc-to">To<br>The Class Teacher / Principal</div>
+        <div class="doc-subject">Subject: Absence Note for ${esc(d.childName)}</div>
+        <div class="doc-body">
+          <p>Respected Sir/Madam,</p>
+          <p>Please excuse my child <strong>${esc(d.childName)}</strong> of class ${esc(d.classInfo)} for being absent on ${esc(d.dates)} due to ${esc(d.reason)}.</p>
+          <p>Kindly grant leave and oblige.</p>
+        </div>
+        <div class="doc-closing">
+          Thanking you,<br>
+          <div class="signature-area" id="sig-placeholder"></div>
+          <div class="doc-name">${esc(d.parentName)}</div>
+          Parent / Guardian
+        </div>`
+    },
+    {
+      id: "extended",
+      name: "Extended Leave Request",
+      fields: [
+        { key: "name", label: "Your Full Name", required: true },
+        { key: "designation", label: "Designation", required: true },
+        { key: "manager", label: "Manager / HR Name", required: true },
+        { key: "fromDate", label: "From Date", type: "date", required: true },
+        { key: "toDate", label: "To Date", type: "date", required: true },
+        { key: "reason", label: "Reason", required: true }
+      ],
+      render: (d) => `
+        <div class="doc-date">${today()}</div>
+        <div class="doc-to">To<br>${esc(d.manager)}</div>
+        <div class="doc-subject">Subject: Request for Extended Leave</div>
+        <div class="doc-body">
+          <p>Dear ${esc(d.manager)},</p>
+          <p>I am writing to request extended leave from ${esc(d.fromDate)} to ${esc(d.toDate)} on account of ${esc(d.reason)}.</p>
+          <p>I understand the extended duration and will ensure all critical responsibilities are handed over before I proceed on leave. I will remain reachable for any urgent matters.</p>
+          <p>I kindly request your approval for the same.</p>
+        </div>
+        <div class="doc-closing">
+          Yours sincerely,<br>
+          <div class="signature-area" id="sig-placeholder"></div>
+          <div class="doc-name">${esc(d.name)}</div>
+          ${esc(d.designation)}
+        </div>`
+    }
+  ],
+
+  authorization: [
+    {
+      id: "general",
+      name: "General Authorization",
+      fields: [
+        { key: "authorizer", label: "Your Full Name (Authorizer)", required: true },
+        { key: "authorized", label: "Authorized Person's Name", required: true },
+        { key: "purpose", label: "Purpose / What they can do", required: true },
+        { key: "validTill", label: "Valid Until (optional)", type: "date", required: false }
+      ],
+      render: (d) => `
+        <div class="doc-date">${today()}</div>
+        <div class="doc-subject" style="text-align:center;">AUTHORIZATION LETTER</div>
+        <div class="doc-body">
+          <p>I, <strong>${esc(d.authorizer)}</strong>, hereby authorize <strong>${esc(d.authorized)}</strong> to act on my behalf for the following purpose:</p>
+          <p style="margin:16px 0;"><em>${esc(d.purpose)}</em></p>
+          ${d.validTill ? `<p>This authorization is valid until ${esc(d.validTill)}.</p>` : "<p>This authorization remains valid until further notice or until the stated purpose is completed.</p>"}
+          <p>I confirm that any action taken by the above-named person within the scope of this authorization shall be considered as done by me.</p>
+        </div>
+        <div class="doc-closing">
+          <div class="signature-area" id="sig-placeholder"></div>
+          <div class="doc-name">${esc(d.authorizer)}</div>
+        </div>`
+    },
+    {
+      id: "collect",
+      name: "Collect Documents / Parcel",
+      fields: [
+        { key: "authorizer", label: "Your Full Name", required: true },
+        { key: "authorized", label: "Person Authorized to Collect", required: true },
+        { key: "item", label: "Document / Parcel Description", required: true },
+        { key: "place", label: "From (Office / School / Courier etc.)", required: true }
+      ],
+      render: (d) => `
+        <div class="doc-date">${today()}</div>
+        <div class="doc-to">To<br>The Concerned Authority<br>${esc(d.place)}</div>
+        <div class="doc-subject">Subject: Authorization to Collect ${esc(d.item)}</div>
+        <div class="doc-body">
+          <p>Dear Sir/Madam,</p>
+          <p>I, ${esc(d.authorizer)}, hereby authorize ${esc(d.authorized)} to collect the following on my behalf:</p>
+          <p style="margin:12px 0;"><strong>${esc(d.item)}</strong></p>
+          <p>Kindly hand over the above to the authorized person after verifying their identity. I take full responsibility for this authorization.</p>
+        </div>
+        <div class="doc-closing">
+          Thanking you,<br>
+          <div class="signature-area" id="sig-placeholder"></div>
+          <div class="doc-name">${esc(d.authorizer)}</div>
+        </div>`
+    },
+    {
+      id: "bank",
+      name: "Bank Authorization",
+      fields: [
+        { key: "authorizer", label: "Account Holder Name", required: true },
+        { key: "authorized", label: "Authorized Person", required: true },
+        { key: "bank", label: "Bank Name / Branch", required: true },
+        { key: "purpose", label: "Purpose (e.g. submit documents, collect statement)", required: true }
+      ],
+      render: (d) => `
+        <div class="doc-date">${today()}</div>
+        <div class="doc-to">To<br>The Branch Manager<br>${esc(d.bank)}</div>
+        <div class="doc-subject">Subject: Authorization Letter</div>
+        <div class="doc-body">
+          <p>Dear Sir/Madam,</p>
+          <p>I, ${esc(d.authorizer)}, am an account holder at your branch. I hereby authorize ${esc(d.authorized)} to ${esc(d.purpose)} on my behalf.</p>
+          <p>I request you to kindly extend the necessary cooperation. I confirm that I take full responsibility for this authorization.</p>
+        </div>
+        <div class="doc-closing">
+          Yours faithfully,<br>
+          <div class="signature-area" id="sig-placeholder"></div>
+          <div class="doc-name">${esc(d.authorizer)}</div>
+        </div>`
+    },
+    {
+      id: "pickup",
+      name: "Child Pickup Authorization",
+      fields: [
+        { key: "parentName", label: "Parent / Guardian Name", required: true },
+        { key: "childName", label: "Child's Name", required: true },
+        { key: "classInfo", label: "Class / Section", required: true },
+        { key: "authorized", label: "Person Authorized to Pick Up", required: true },
+        { key: "relation", label: "Relation to Child", required: true }
+      ],
+      render: (d) => `
+        <div class="doc-date">${today()}</div>
+        <div class="doc-to">To<br>The Principal / Class Teacher</div>
+        <div class="doc-subject">Subject: Authorization for Pickup of ${esc(d.childName)}</div>
+        <div class="doc-body">
+          <p>Respected Sir/Madam,</p>
+          <p>I, ${esc(d.parentName)}, parent/guardian of ${esc(d.childName)} studying in ${esc(d.classInfo)}, hereby authorize ${esc(d.authorized)} (${esc(d.relation)}) to pick up my child from school.</p>
+          <p>Kindly allow the above-named person to collect my child. I take full responsibility for this authorization.</p>
+        </div>
+        <div class="doc-closing">
+          Thanking you,<br>
+          <div class="signature-area" id="sig-placeholder"></div>
+          <div class="doc-name">${esc(d.parentName)}</div>
+          Parent / Guardian
+        </div>`
+    }
+  ]
+};
+
+// ===================== STATE =====================
+let currentCategory = null;
+let currentTemplate = null;
+let formData = {};
+let signatureDataUrl = null;
+let inkColor = "#1a3a6e";
+
+// ===================== HELPERS =====================
+function esc(str) {
+  if (!str) return "";
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+function today() {
+  return new Date().toLocaleDateString("en-GB", {
+    day: "numeric", month: "long", year: "numeric"
+  });
+}
+
+function showScreen(id) {
+  document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
+  document.getElementById(id).classList.add("active");
+  window.scrollTo(0, 0);
+}
+
+// ===================== NAVIGATION =====================
+function goHome() {
+  currentCategory = null;
+  currentTemplate = null;
+  showScreen("screen-home");
+}
+
+function goTemplates() {
+  currentTemplate = null;
+  showScreen("screen-templates");
+}
+
+function goForm() {
+  showScreen("screen-form");
+}
+
+function goPreview() {
+  // Collect form data
+  formData = {};
+  const inputs = document.querySelectorAll("#form-fields [data-key]");
+  let valid = true;
+  inputs.forEach(inp => {
+    const key = inp.getAttribute("data-key");
+    const val = inp.value.trim();
+    formData[key] = val;
+    if (inp.required && !val) {
+      valid = false;
+      inp.style.borderColor = "var(--danger)";
+    } else {
+      inp.style.borderColor = "";
+    }
+  });
+  if (!valid) {
+    alert("Please fill all required fields.");
+    return;
+  }
+
+  // Save common profile fields
+  saveProfile();
+
+  // Render preview
+  const html = currentTemplate.render(formData);
+  document.getElementById("preview-frame").innerHTML = html;
+  if (signatureDataUrl) {
+    const placeholder = document.getElementById("sig-placeholder");
+    if (placeholder) {
+      placeholder.innerHTML = `<img src="${signatureDataUrl}" alt="Signature">`;
+    }
+  }
+  showScreen("screen-preview");
+}
+
+function goSignature() {
+  showScreen("signature-screen");
+  initSignaturePad();
+}
+
+// ===================== RENDERERS =====================
+function renderCategories() {
+  const grid = document.getElementById("category-grid");
+  grid.innerHTML = CATEGORIES.map(c => `
+    <div class="card" onclick="selectCategory('${c.id}')">
+      <h3>${c.name}</h3>
+      <p>${c.hint}</p>
+    </div>
+  `).join("");
+}
+
+function selectCategory(id) {
+  currentCategory = CATEGORIES.find(c => c.id === id);
+  document.getElementById("templates-title").textContent = currentCategory.name;
+  const templates = TEMPLATES[id];
+  const grid = document.getElementById("template-grid");
+  grid.innerHTML = templates.map(t => `
+    <div class="card" onclick="selectTemplate('${id}', '${t.id}')">
+      <h3>${t.name}</h3>
+    </div>
+  `).join("");
+  showScreen("screen-templates");
+}
+
+function selectTemplate(catId, tmplId) {
+  currentTemplate = TEMPLATES[catId].find(t => t.id === tmplId);
+  document.getElementById("form-title").textContent = currentTemplate.name;
+  renderForm(currentTemplate.fields);
+  loadProfile();
+  showScreen("screen-form");
+}
+
+function renderForm(fields) {
+  const container = document.getElementById("form-fields");
+  container.innerHTML = fields.map(f => {
+    const type = f.type || "text";
+    const req = f.required ? "required" : "";
+    const opt = f.required ? "" : `<span class="optional">(optional)</span>`;
+    if (type === "date") {
+      return `<div class="field">
+        <label>${f.label} ${opt}</label>
+        <input type="date" data-key="${f.key}" ${req}>
+      </div>`;
+    }
+    return `<div class="field">
+      <label>${f.label} ${opt}</label>
+      <input type="text" data-key="${f.key}" ${req} placeholder="${f.label}">
+    </div>`;
+  }).join("");
+}
+
+// ===================== PROFILE (localStorage) =====================
+function saveProfile() {
+  const keys = ["name", "designation", "manager", "company", "fromName", "authorizer", "parentName"];
+  const profile = JSON.parse(localStorage.getItem("instadocs_profile") || "{}");
+  keys.forEach(k => {
+    if (formData[k]) profile[k] = formData[k];
+  });
+  localStorage.setItem("instadocs_profile", JSON.stringify(profile));
+}
+
+function loadProfile() {
+  const profile = JSON.parse(localStorage.getItem("instadocs_profile") || "{}");
+  Object.keys(profile).forEach(k => {
+    const inp = document.querySelector(`#form-fields [data-key="${k}"]`);
+    if (inp && !inp.value) inp.value = profile[k];
+  });
+}
+
+// ===================== SIGNATURE =====================
+let canvas, ctx, drawing = false, lastX, lastY;
+
+function initSignaturePad() {
+  canvas = document.getElementById("sig-canvas");
+  const rect = canvas.parentElement.getBoundingClientRect();
+  canvas.width = rect.width * 2;
+  canvas.height = 220 * 2;
+  canvas.style.width = rect.width + "px";
+  canvas.style.height = "220px";
+  ctx = canvas.getContext("2d");
+  ctx.scale(2, 2);
+  ctx.strokeStyle = inkColor;
+  ctx.lineWidth = 2.5;
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+
+  // Clear previous listeners by cloning
+  const newCanvas = canvas.cloneNode(true);
+  canvas.parentNode.replaceChild(newCanvas, canvas);
+  canvas = newCanvas;
+  ctx = canvas.getContext("2d");
+  ctx.scale(2, 2);
+  ctx.strokeStyle = inkColor;
+  ctx.lineWidth = 2.5;
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+
+  function getPos(e) {
+    const r = canvas.getBoundingClientRect();
+    const touch = e.touches ? e.touches[0] : e;
+    return {
+      x: touch.clientX - r.left,
+      y: touch.clientY - r.top
+    };
+  }
+
+  function start(e) {
+    e.preventDefault();
+    drawing = true;
+    const p = getPos(e);
+    lastX = p.x; lastY = p.y;
+  }
+  function move(e) {
+    if (!drawing) return;
+    e.preventDefault();
+    const p = getPos(e);
+    ctx.beginPath();
+    ctx.moveTo(lastX, lastY);
+    ctx.lineTo(p.x, p.y);
+    ctx.stroke();
+    lastX = p.x; lastY = p.y;
+  }
+  function end(e) {
+    drawing = false;
+  }
+
+  canvas.addEventListener("mousedown", start);
+  canvas.addEventListener("mousemove", move);
+  canvas.addEventListener("mouseup", end);
+  canvas.addEventListener("mouseout", end);
+  canvas.addEventListener("touchstart", start, { passive: false });
+  canvas.addEventListener("touchmove", move, { passive: false });
+  canvas.addEventListener("touchend", end);
+}
+
+function setInkColor(el) {
+  document.querySelectorAll(".color-btn").forEach(b => b.classList.remove("active"));
+  el.classList.add("active");
+  inkColor = el.getAttribute("data-color");
+  if (ctx) ctx.strokeStyle = inkColor;
+}
+
+function clearSignature() {
+  if (ctx && canvas) {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+  }
+  signatureDataUrl = null;
+}
+
+function saveSignatureAndPreview() {
+  if (canvas) {
+    // Check if something was drawn (very simple)
+    signatureDataUrl = canvas.toDataURL("image/png");
+  }
+  goPreview();
+}
+
+function skipSignature() {
+  signatureDataUrl = null;
+  goPreview();
+}
+
+// ===================== PDF EXPORT =====================
+function exportPdf() {
+  // Prefer native bridge
+  if (window.AndroidBridge && window.AndroidBridge.exportPdf) {
+    const name = (currentTemplate?.name || "document").replace(/\s+/g, "_") + ".pdf";
+    window.AndroidBridge.exportPdf(name);
+  } else {
+    // Fallback for browser testing: print
+    window.print();
+  }
+}
+
+// ===================== BACK HANDLER =====================
+window.appHandleBack = function () {
+  const active = document.querySelector(".screen.active");
+  if (!active) {
+    if (window.AndroidBridge) AndroidBridge.onBackResult(true);
+    return;
+  }
+  const id = active.id;
+  if (id === "screen-home") {
+    if (window.AndroidBridge) AndroidBridge.onBackResult(true);
+  } else if (id === "screen-templates") {
+    goHome();
+    if (window.AndroidBridge) AndroidBridge.onBackResult(false);
+  } else if (id === "screen-form") {
+    goTemplates();
+    if (window.AndroidBridge) AndroidBridge.onBackResult(false);
+  } else if (id === "screen-preview") {
+    goForm();
+    if (window.AndroidBridge) AndroidBridge.onBackResult(false);
+  } else if (id === "signature-screen") {
+    goPreview();
+    if (window.AndroidBridge) AndroidBridge.onBackResult(false);
+  } else {
+    if (window.AndroidBridge) AndroidBridge.onBackResult(true);
+  }
+};
+
+// ===================== INIT =====================
+renderCategories();
+</script>
+</body>
+</html>
