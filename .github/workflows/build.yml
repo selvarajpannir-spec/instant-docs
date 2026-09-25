@@ -20,7 +20,10 @@ jobs:
         distribution: 'temurin'
 
     - name: Set up Android SDK
-      uses: android-actions/setup-android@v3
+      uses: android-actions/setup-android@v4
+      with:
+        # Google removed the old "tools" package. Only install what we need.
+        packages: 'platform-tools platforms;android-36 build-tools;36.0.0'
 
     - name: Install Gradle 9.6.1
       uses: gradle/actions/setup-gradle@v3
@@ -163,3 +166,4 @@ jobs:
       with:
         name: unsigned-apk
         path: project/app/build/outputs/apk/release/*.apk
+        
